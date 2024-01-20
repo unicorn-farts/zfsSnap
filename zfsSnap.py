@@ -5,9 +5,10 @@ import argparse, subprocess
 
 # configurable options
 zfsPool = 'rpool/ROOT/ubuntu_in1307'
-snapNameSchema = (zfsPool + '@_' + datetime.now().strftime('%Y-%m-%d') + '_')
-snapLimitDaily = 7
-snapLimitWeekly = 4
+snapNameSchema = (zfsPool + '@' + datetime.now().strftime('%Y-%m-%d--%H%M') + '_')
+snapLimitHourly  = 8
+snapLimitDaily   = 7
+snapLimitWeekly  = 4
 snapLimitMonthly = 2
 
 def makeSnap(name):
@@ -17,12 +18,14 @@ def destroySnap(name):
     subprocess.run(['/usr/bin/sudo', 'zfs', 'destroy', name])
 
 # populate snapshot lists
-dailySnaps, weeklySnaps, monthlySnaps = ([], [], [])
+hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps = ([], [], [], [])
 result = subprocess.run(['/usr/sbin/zfs', 'list', '-t', 'snapshot'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 snaps = result.stdout.strip().split()[5::5]
 interval = len(snapNameSchema)
 for snapName in snaps:
-    if snapName[interval:] == 'daily':
+    if snapName[interval:] == 'hourly':
+        hourlySnaps.append(snapName)
+    elif snapName[interval:] == 'daily':
         dailySnaps.append(snapName)
     elif snapName[interval:] == 'weekly':
         weeklySnaps.append(snapName)
@@ -34,7 +37,7 @@ for snapName in snaps:
 # set cmdline arguments/options
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
-group.add_argument('--schedule', choices=['daily', 'weekly', 'monthly'], help='set snap name suffix')
+group.add_argument('--schedule', choices=['hourly', 'daily', 'weekly', 'monthly'], help='set snap name suffix')
 group.add_argument('--list', help='show current snapshots', action='store_true')
 args = parser.parse_args()
 
@@ -42,7 +45,7 @@ if args.schedule: # crontab calls script using schedule argument
     makeSnap((snapNameSchema + args.schedule))
 
 if args.list: # display current snapshots
-    for i in [dailySnaps, weeklySnaps, monthlySnaps]:
+    for i in [hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps]:
         pprint(i)
 
 # cleanup old snaps // cleanup can also be accomplished by running script without arguments
