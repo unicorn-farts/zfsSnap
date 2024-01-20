@@ -41,7 +41,7 @@ group.add_argument('--create', choices=['hourly', 'daily', 'weekly', 'monthly'],
 group.add_argument('--list', help='show current snapshots', action='store_true')
 args = parser.parse_args()
 
-if args.create: # crontab calls script using schedule argument
+if args.create: # crontab calls script using create argument
     makeSnap((snapNameSchema + args.create))
 
 if args.list: # display current snapshots
