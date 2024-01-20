@@ -24,25 +24,25 @@ snaps = result.stdout.strip().split()[5::5]
 interval = len(snapNameSchema)
 for snapName in snaps:
     if snapName[interval:] == 'hourly':
-        hourlySnaps.append(snapName)
+        hourlySnaps.append(snapName[snapName.index('@'):])
     elif snapName[interval:] == 'daily':
-        dailySnaps.append(snapName)
+        dailySnaps.append(snapName[snapName.index('@'):])
     elif snapName[interval:] == 'weekly':
-        weeklySnaps.append(snapName)
+        weeklySnaps.append(snapName[snapName.index('@'):])
     elif snapName[interval:] == 'monthly':
-        monthlySnaps.append(snapName)
+        monthlySnaps.append(snapName[snapName.index('@'):])
     else: # some other snap not part of this script
         pass
 
 # set cmdline arguments/options
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
-group.add_argument('--schedule', choices=['hourly', 'daily', 'weekly', 'monthly'], help='set snap name suffix')
+group.add_argument('--create', choices=['hourly', 'daily', 'weekly', 'monthly'], help='set snap name suffix')
 group.add_argument('--list', help='show current snapshots', action='store_true')
 args = parser.parse_args()
 
-if args.schedule: # crontab calls script using schedule argument
-    makeSnap((snapNameSchema + args.schedule))
+if args.create: # crontab calls script using schedule argument
+    makeSnap((snapNameSchema + args.create))
 
 if args.list: # display current snapshots
     for i in [hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps]:
