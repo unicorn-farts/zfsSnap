@@ -15,7 +15,7 @@ def makeSnap(name):
     subprocess.run(['/usr/bin/sudo', 'zfs', 'snap', name])
 
 def destroySnap(name):
-    subprocess.run(['/usr/bin/sudo', 'zfs', 'destroy', name])
+    subprocess.run(['/usr/bin/sudo', 'zfs', 'destroy', zfsPool + name])
 
 # populate snapshot lists
 hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps = ([], [], [], [])
@@ -49,6 +49,9 @@ if args.list: # display current snapshots
         pprint(i)
 
 # cleanup old snaps // cleanup can also be accomplished by running script without arguments
+while len(hourlySnaps) > snapLimitHourly:
+    destroySnap(hourlySnaps[0])
+    del hourlySnaps[0]
 while len(dailySnaps) > snapLimitDaily:
     destroySnap(dailySnaps[0])
     del dailySnaps[0]
