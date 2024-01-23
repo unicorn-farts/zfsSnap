@@ -46,7 +46,7 @@ if args.create: # crontab calls script using create argument
 
 if args.list: # display current snapshots
     for i in [hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps]:
-        pprint(i)
+        pprint(i, width=1)
 
 # cleanup old snaps // cleanup can also be accomplished by running script without arguments
 while len(hourlySnaps) > snapLimitHourly:
