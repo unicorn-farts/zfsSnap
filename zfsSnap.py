@@ -5,14 +5,20 @@ import argparse, subprocess
 
 # configurable options
 zfsPool = 'rpool/ROOT/ubuntu_in1307'
-snapNameSchema = (zfsPool + '@' + datetime.now().strftime('%Y-%m-%d--%H%M') + '_')
 snapLimitHourly  = 8
 snapLimitDaily   = 7
 snapLimitWeekly  = 4
 snapLimitMonthly = 2
+maxDiskUsage = 100 # GB
+snapNameSchema = (zfsPool + '@' + datetime.now().strftime('%Y-%m-%d--%H%M') + '_')
+
 
 def makeSnap(name):
-    subprocess.run(['/usr/bin/sudo', 'zfs', 'snap', name])
+    if not byteTotal > (maxDiskUsage * 1024000000):
+        subprocess.run(['/usr/bin/sudo', 'zfs', 'snap', name])
+    else:
+        print('Error: snapshot maxDiskUsage exceeded!')
+        subprocess.run(['/usr/bin/logger', 'zfsSnap.py: Error: snapshot maxDiskUsage exceeded!'])
 
 def destroySnap(name):
     subprocess.run(['/usr/bin/sudo', 'zfs', 'destroy', zfsPool + name])
