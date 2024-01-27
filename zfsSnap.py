@@ -15,7 +15,6 @@ snapLimit = {
 maxDiskUsage = 100 # GB
 snapNameSchema = (zfsPool + '@' + datetime.now().strftime('%Y-%m-%d--%H%M') + '_')
 
-
 def makeSnap(name):
     if not byteTotal > (maxDiskUsage * 1024000000):
         retCode = subprocess.call([zfs, 'snap', name])
@@ -40,7 +39,7 @@ ss['hourly'], ss['daily'], ss['weekly'], ss['monthly'] = ([], [], [], [])
 result = subprocess.run([zfs, 'list', '-t', 'snapshot'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 snaps, sizes = (result.stdout.strip().split()[5::5], result.stdout.strip().split()[6::5]) # this will break if list output/format from zfs binary changes
 interval = len(snapNameSchema)
-for snap in snaps:
+for snap in snaps: # load snap names into ss dict
     if snap[interval:] == 'hourly':
         ss['hourly'].append(snap[snap.index('@'):])
     elif snap[interval:] == 'daily':
@@ -52,7 +51,7 @@ for snap in snaps:
     else: # some other snap not part of this script
         pass
 kTotal, mTotal, gTotal = (0, 0, 0)
-for snapSize in sizes:
+for snapSize in sizes: # load snap sizes 
     if snapSize[-1] == 'K':
         kTotal += float(snapSize[:-1])
     elif snapSize[-1] == 'M':
