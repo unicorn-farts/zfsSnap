@@ -4,29 +4,31 @@ from pprint import pprint
 import argparse, subprocess
 
 # configurable options
-zfsPool = 'rpool/ROOT/ubuntu_in1307'
-snapLimitHourly  = 8
-snapLimitDaily   = 7
-snapLimitWeekly  = 4
-snapLimitMonthly = 2
+zfsPool = 'rpool/ROOT/ubuntu_in1307' # pool you want to snapshot // "grep zfs /proc/mounts" to list currently mounted pools
+zfs = '/usr/sbin/zfs' # path to zfs binary // "which zfs" to find the path of yours
+snapLimit = {
+'hourly':   8,
+'daily':    7,
+'weekly':   4,
+'monthly':  2 }
 maxDiskUsage = 100 # GB
 snapNameSchema = (zfsPool + '@' + datetime.now().strftime('%Y-%m-%d--%H%M') + '_')
 
 
 def makeSnap(name):
     if not byteTotal > (maxDiskUsage * 1024000000):
-        subprocess.run(['/usr/bin/sudo', 'zfs', 'snap', name])
+        subprocess.run([zfs, 'snap', name])
     else:
         print('Error: snapshot maxDiskUsage exceeded!')
         subprocess.run(['/usr/bin/logger', 'zfsSnap.py: Error: snapshot maxDiskUsage exceeded!'])
 
 def destroySnap(name):
-    subprocess.run(['/usr/bin/sudo', 'zfs', 'destroy', zfsPool + name])
+    subprocess.run([zfs, 'destroy', zfsPool + name])
 
 def fetchSnaps(): # populate snapshot lists
     global hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps, byteTotal
     hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps = ([], [], [], [])
-    result = subprocess.run(['/usr/sbin/zfs', 'list', '-t', 'snapshot'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    result = subprocess.run([zfs, 'list', '-t', 'snapshot'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     snaps, sizes = (result.stdout.strip().split()[5::5], result.stdout.strip().split()[6::5])
     interval = len(snapNameSchema)
     for snapName in snaps:
@@ -52,18 +54,10 @@ def fetchSnaps(): # populate snapshot lists
     cleanSnaps()
 
 def cleanSnaps(): # cleanup old snaps // cleanup can also be accomplished by running script without arguments
-    while len(hourlySnaps) > snapLimitHourly:
-        destroySnap(hourlySnaps[0])
-        del hourlySnaps[0]
-    while len(dailySnaps) > snapLimitDaily:
-        destroySnap(dailySnaps[0])
-        del dailySnaps[0]
-    while len(weeklySnaps) > snapLimitWeekly:
-        destroySnap(weeklySnaps[0])
-        del weeklySnaps[0]
-    while len(monthlySnaps) > snapLimitMonthly:
-        destroySnap(monthlySnaps[0])
-        del monthlySnaps[0]
+    for interval in snapLimit.keys():
+        while len(eval(interval + 'Snaps')) > snapLimit[interval]:
+            destroySnap(eval(interval + 'Snaps')[0])
+            del eval(interval + 'Snaps')[0]
 
 # set cmdline arguments/options
 parser = argparse.ArgumentParser()
