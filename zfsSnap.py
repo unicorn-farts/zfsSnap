@@ -23,23 +23,24 @@ def makeSnap(name):
         subprocess.run(['/usr/bin/logger', 'zfsSnap.py: Error: snapshot maxDiskUsage exceeded!'])
 
 def destroySnap(name):
-    subprocess.run([zfs, 'destroy', zfsPool + name])
+    return subprocess.call([zfs, 'destroy', zfsPool + name], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
 def fetchSnaps(): # populate snapshot lists
-    global hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps, byteTotal
-    hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps = ([], [], [], [])
+    global ss, byteTotal
+    ss = {}
+    ss['hourly'], ss['daily'], ss['weekly'], ss['monthly'] = ([], [], [], [])
     result = subprocess.run([zfs, 'list', '-t', 'snapshot'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     snaps, sizes = (result.stdout.strip().split()[5::5], result.stdout.strip().split()[6::5])
     interval = len(snapNameSchema)
-    for snapName in snaps:
-        if snapName[interval:] == 'hourly':
-            hourlySnaps.append(snapName[snapName.index('@'):])
-        elif snapName[interval:] == 'daily':
-            dailySnaps.append(snapName[snapName.index('@'):])
-        elif snapName[interval:] == 'weekly':
-            weeklySnaps.append(snapName[snapName.index('@'):])
-        elif snapName[interval:] == 'monthly':
-            monthlySnaps.append(snapName[snapName.index('@'):])
+    for snap in snaps:
+        if snap[interval:] == 'hourly':
+            ss['hourly'].append(snap[snap.index('@'):])
+        elif snap[interval:] == 'daily':
+            ss['daily'].append(snap[snap.index('@'):])
+        elif snap[interval:] == 'weekly':
+            ss['weekly'].append(snap[snap.index('@'):])
+        elif snap[interval:] == 'monthly':
+            ss['monthly'].append(snap[snap.index('@'):])
         else: # some other snap not part of this script
             pass
     kTotal, mTotal, gTotal = (0, 0, 0)
@@ -55,9 +56,12 @@ def fetchSnaps(): # populate snapshot lists
 
 def cleanSnaps(): # cleanup old snaps // cleanup can also be accomplished by running script without arguments
     for interval in snapLimit.keys():
-        while len(eval(interval + 'Snaps')) > snapLimit[interval]:
-            destroySnap(eval(interval + 'Snaps')[0])
-            del eval(interval + 'Snaps')[0]
+        while len(ss[interval]) > snapLimit[interval]:
+            if destroySnap(ss[interval][0]) == 0:
+                del ss[interval][0]
+            else:
+                print('Warning: old snap(s) present and couldn\'t be removed. Does this user have permission?')
+                break
 
 # set cmdline arguments/options
 parser = argparse.ArgumentParser()
@@ -72,6 +76,14 @@ if args.create: # crontab calls script using create argument
     makeSnap((snapNameSchema + args.create))
 
 if args.list: # display current snapshots
-    for i in [hourlySnaps, dailySnaps, weeklySnaps, monthlySnaps]:
-        pprint(i, width=1)
+    for interval in ss.keys():
+        heading = '[ ' + interval + ' ]  current=' + str(len(ss[interval])) + ' max=' + str(snapLimit[interval])
+        if not len(ss[interval]) > snapLimit[interval]:
+            print(heading)
+        else:
+            print(heading.upper() + ' !WARN')
+        for snapList in ss.values():
+            for snap in snapList:
+                if snap[(snap.index('_') + 1):] == interval:
+                    print(' ' + snap[:snap.index('_')])
     print('Total disk space used: ' + str(int(byteTotal / 1024000)) + 'M') # print byte total as MB
