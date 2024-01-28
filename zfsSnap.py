@@ -4,7 +4,7 @@ from os.path import basename
 import argparse, subprocess
 
 # configurable options
-zfsPool = 'rpool/ROOT/ubuntu_in1307' # pool you want to snapshot // "grep zfs /proc/mounts" to list currently mounted pools
+zfsPool = 'rpool/ROOT/--your-pool-here--' # pool you want to snapshot // "grep zfs /proc/mounts" to list currently mounted pools
 zfs = '/usr/sbin/zfs' # path to zfs binary
 logger = '/usr/bin/logger' # path to logger binary
 snapLimit = {
@@ -80,7 +80,7 @@ if args.create: # crontab calls script using create argument
         print('Error: snapshot maxDiskUsage exceeded!')
         subprocess.run([logger, basename(__file__), 'ERR:', 'snapshot maxDiskUsage exceeded!'])
     elif retCode == 2:
-        print('Warning: could not create snap:', newSnap)
+        print('Warning: could not create snap:', newSnap + '.', 'does this user have permission?')
         subprocess.run([logger, basename(__file__), 'WARN:', 'could not create snap:', newSnap + '.', 'does this user have permission?'])
     else:
         print('Snapshot created:', newSnap)
@@ -98,4 +98,4 @@ if args.list: # display current snapshots
                 if snap[(snap.index('_') + 1):] == interval:
                     print(' ' + snap)
         print()
-    print('disk space :: current=' + str(round(byteTotal / 1024000000, 2)) + 'G', 'max=' + str(maxDiskUsage) + 'G') # print byte total as GB
+    print('disk space :: current=' + str(round(byteTotal / 1024000000, 2)) + 'G', 'max=' + str(maxDiskUsage) + 'G') # print byte totals as GB
