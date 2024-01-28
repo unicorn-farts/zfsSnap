@@ -50,15 +50,17 @@ for snap in snaps: # load snap names into ss dict
         ss['monthly'].append(snap[snap.index('@'):])
     else: # some other snap not part of this script
         pass
-kTotal, mTotal, gTotal = (0, 0, 0)
+bTotal, kTotal, mTotal, gTotal = (0, 0, 0, 0)
 for snapSize in sizes: # load snap sizes 
-    if snapSize[-1] == 'K':
+    if snapSize[-1] == 'B':
+        bTotal += float(snapSize[:-1])
+    elif snapSize[-1] == 'K':
         kTotal += float(snapSize[:-1])
     elif snapSize[-1] == 'M':
         mTotal += float(snapSize[:-1])
     elif snapSize[-1] == 'G':
         gTotal += float(snapSize[:-1])
-byteTotal = (kTotal * 1024) + (mTotal * 1024000) + (gTotal * 1024000000)
+byteTotal = bTotal + (kTotal * 1024) + (mTotal * 1024000) + (gTotal * 1024000000)
 
 # cleanup old snaps
 for interval in snapLimit.keys():
