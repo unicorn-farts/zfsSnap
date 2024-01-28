@@ -60,6 +60,17 @@ for snapSize in sizes: # load snap sizes
         gTotal += float(snapSize[:-1])
 byteTotal = (kTotal * 1024) + (mTotal * 1024000) + (gTotal * 1024000000)
 
+# cleanup old snaps
+for interval in snapLimit.keys():
+    while len(ss[interval]) > snapLimit[interval]:
+        if destroySnap(ss[interval][0]) == 0:
+            subprocess.run([logger, basename(__file__), 'INFO:', 'snapshot expired, removed:', zfsPool + ss[interval][0]])
+            del ss[interval][0]
+        else:
+            print('Warning: old snap(s) present and couldn\'t be removed. Does this user have permission?')
+            subprocess.run([logger, basename(__file__), 'WARN:', 'old snap(s) present but couldn\'t be removed. Does this user have permission?'])
+            break
+
 if args.create: # crontab calls script using create argument
     newSnap = (snapNameSchema + args.create)
     retCode = makeSnap(newSnap)
@@ -75,7 +86,7 @@ if args.create: # crontab calls script using create argument
 
 if args.list: # display current snapshots
     for interval in ss.keys():
-        heading = '[ ' + interval + ' ]  current=' + str(len(ss[interval])) + ' max=' + str(snapLimit[interval])
+        heading = interval + ' :: current=' + str(len(ss[interval])) + ' max=' + str(snapLimit[interval])
         if not len(ss[interval]) > snapLimit[interval]:
             print(heading)
         else:
@@ -84,15 +95,5 @@ if args.list: # display current snapshots
             for snap in snapList:
                 if snap[(snap.index('_') + 1):] == interval:
                     print(' ' + snap)
-    print('Total disk space used:', str(int(byteTotal / 1024000)) + 'M') # print byte total as MB
-
-# cleanup old snaps
-for interval in snapLimit.keys():
-    while len(ss[interval]) > snapLimit[interval]:
-        if destroySnap(ss[interval][0]) == 0:
-            subprocess.run([logger, basename(__file__), 'INFO:', 'snapshot expired, removed:', zfsPool + ss[interval][0]])
-            del ss[interval][0]
-        else:
-            print('Warning: old snap(s) present and couldn\'t be removed. Does this user have permission?')
-            subprocess.run([logger, basename(__file__), 'WARN: old snap(s) present but couldn\'t be removed. Does this user have permission?'])
-            break
+        print()
+    print('disk space :: current=' + str(round(byteTotal / 1024000000, 2)) + 'G', 'max=' + str(maxDiskUsage) + 'G') # print byte total as GB
