@@ -4,21 +4,21 @@ from os.path import basename
 import argparse, subprocess
 
 # configurable options
-zfsPool = 'rpool/ROOT/--your-pool-here--' # pool you want to snapshot // "grep zfs /proc/mounts" to list currently mounted pools
+zfsPool = 'rpool/ROOT/--your-pool-here--' # pool you want to snapshot
 zfs = '/usr/sbin/zfs' # path to zfs binary
 logger = '/usr/bin/logger' # path to logger binary
-snapLimit = {
+snapLimit = { # set the below to values sensible for your system
 'hourly':   8,
 'daily':    7,
 'weekly':   4,
 'monthly':  2 }
 maxDiskUsage = 100 # GB
-snapNameSchema = (zfsPool + '@' + datetime.now().strftime('%Y-%m-%d--%H%M') + '_')
+snapNameSchema = (zfsPool + '@' + datetime.now().strftime('%Y-%m-%d--%H%M') + '_') # zfs binary requires '@' at the end of pool name to create snapshots
 
 def makeSnap(name):
     if not byteTotal > (maxDiskUsage * 1024000000):
-        retCode = subprocess.call([zfs, 'snap', name])
-        if retCode == 0:
+        ec = subprocess.call([zfs, 'snap', name])
+        if ec == 0:
             return 0
         return 2
     return 1
@@ -75,11 +75,11 @@ for interval in snapLimit.keys():
 
 if args.create: # crontab calls script using create argument
     newSnap = (snapNameSchema + args.create)
-    retCode = makeSnap(newSnap)
-    if retCode == 1:
+    ec = makeSnap(newSnap)
+    if ec == 1:
         print('Error: snapshot maxDiskUsage exceeded!')
         subprocess.run([logger, basename(__file__), 'ERR:', 'snapshot maxDiskUsage exceeded!'])
-    elif retCode == 2:
+    elif ec == 2:
         print('Warning: could not create snap:', newSnap + '.', 'does this user have permission?')
         subprocess.run([logger, basename(__file__), 'WARN:', 'could not create snap:', newSnap + '.', 'does this user have permission?'])
     else:
@@ -89,9 +89,9 @@ if args.create: # crontab calls script using create argument
 if args.list: # display current snapshots
     for interval in ss.keys():
         heading = interval + ' :: current=' + str(len(ss[interval])) + ' max=' + str(snapLimit[interval])
-        if not len(ss[interval]) > snapLimit[interval]:
+        if not len(ss[interval]) > snapLimit[interval]: # snapLimits within range
             print(heading)
-        else:
+        else: # a snapLimit was exceeded
             print(heading.upper(), '!WARN')
         for snapList in ss.values():
             for snap in snapList:
